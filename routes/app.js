@@ -90,7 +90,7 @@ module.exports = function(app) {
                 console.log('GET PRIVATE KEY');
                 pair.importKey(app.privateKey);
 
-                /*
+
 
                 PID = pair.exportKey('pkcs8-public-pem');
                 console.log('PID pkcs8');
@@ -125,7 +125,7 @@ module.exports = function(app) {
                 console.log('sign Generado');
                 console.log('------------------');
 
-                */
+
 
                 vote = (big("voto",16).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
                 console.log('vote Generado');
@@ -182,7 +182,7 @@ module.exports = function(app) {
 
                 //Decrypt Sign + hash + compare
 
-                var decryptSign = (big(sign).modPow(PIDe, PIDn));
+                var decryptSign = (big(sign).modPow(pair.keyPair.e, pair.keyPair.n));
                 var hashPID = require("crypto")
                     .createHash("sha1")
                     .update(PID)
@@ -210,8 +210,25 @@ module.exports = function(app) {
 
                 console.log('------------------');
 
+
+                if(hashPID.toString()===decryptSign.toString()){
+
+                    if(hashVote.toString()===decryptDigest.toString()){
+                        console.log('200:OK');
+                        res.send('200:OK');
+                    }
+                    else {
+                        console.log('402: Vote invalido.');
+                        res.send('402: Vote invalido.');
+                    }
+                }
+                else
+                    console.log('401: Sign invalido.');
+                    res.send('401: Sign invalido.')
+
             } else {
                 console.log('ERROR: ' + err);
+                res.send('Error: '+err);
             }
         });
 
