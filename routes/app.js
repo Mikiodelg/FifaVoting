@@ -15,6 +15,42 @@ module.exports = function(app) {
         });
     };
 
+    getModulus2 = function(req,res){
+        App.findById('555b1ffe378a083025000002', function (err, app) {
+            if (!err) {
+                console.log('GET /Modulus');
+                var keys = require('node-rsa');
+                var pair = new keys();
+                console.log('GET PRIVATE KEY');
+                pair.importKey(app.privateKey);
+                console.log('Modulus:');
+
+                var exp = pair.keyPair.n.toString();
+                var bigint = big(exp,16);
+                console.log(bigint.toString());
+                res.send(bigint.toString());
+            } else {
+                console.log('ERROR: ' + err);
+            }
+        });
+    };
+
+    getExponent2 = function(req,res){
+        App.findById('555b1ffe378a083025000002', function (err, app) {
+            if (!err) {
+                console.log('GET /Exponent');
+                var keys = require('node-rsa');
+                var pair = new keys();
+                console.log('GET PRIVATE KEY');
+                pair.importKey(app.privateKey);
+                console.log('exponent:');
+                //console.log(pair.keyPair.e);
+                res.send(pair.keyPair.e.toString());
+            } else {
+                console.log('ERROR: ' + err);
+            }
+        });
+    };
     getPublicKey = function(req,res){
         App.findById('55080390e5f4114c13000001', function (err, app) {
             if (!err) {
@@ -76,6 +112,10 @@ module.exports = function(app) {
     };
 
     postVote = function(req,res){
+        console.log('PID: '+req.body.PID);
+        console.log('sign: '+req.body.sign);
+        console.log('vote: '+req.body.vote);
+        console.log('digest: '+req.body.digest);
 
         var PID = null;
         var sign = null;
@@ -197,7 +237,7 @@ module.exports = function(app) {
 
                 //Decrypt Dogest + hash + compare
 
-                var decryptDigest = (big(digest).modPow(pair.keyPair.e, pair.keyPair.n));
+                var decryptDigest = (big(digest).modPow(PIDe, PIDn));
                 var hashVote = require("crypto")
                     .createHash("sha1")
                     .update(vote)
@@ -282,7 +322,9 @@ module.exports = function(app) {
     app.get('/publicKey', getPublicKey);
     app.get('/getExponent', getExponent);
     app.get('/getModulus', getModulus);
-    app.post('/apps',postKeys);
+    app.get('/EU/getExponent', getExponent2);
+    app.get('/EU/getModulus', getModulus2);
+    app.post('/apps/register',postKeys);
     app.post('/EU/Evote',postVote);
 };
 
