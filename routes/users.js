@@ -52,7 +52,7 @@ module.exports = function(app) {
         res.send(user);
     };
 
-//DELETE - Delete a TVShow with specified ID
+    //DELETE - Delete a TVShow with specified ID
     deleteUser = function(req, res) {
         User.findById(req.params.id, function(err, user) {
             user.remove(function(err) {

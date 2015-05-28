@@ -97,8 +97,8 @@ module.exports = function(app) {
     };
 
     //DELETE - Delete a TVShow with specified ID
-    deleteUser = function(req, res) {
-        User.findById(req.params.id, function(err, user) {
+    deleteUsers = function(req, res) {
+        /*User.findById(req.params.id, function(err, user) {
             user.remove(function(err) {
                 if(!err) {
                     console.log('Removed');
@@ -109,6 +109,20 @@ module.exports = function(app) {
                 }
             })
         });
+        */
+        var Db = require('mongodb').Db;
+        var Server = require('mongodb').Server;
+        var db = new Db('test', new Server('localhost', 27017));
+// Establish connection to db
+        db.open(function(err, db) {
+            var usersdelete = db.collection("user");
+            usersdelete.remove({},function(err,numberRemoved){
+                console.log("inside remove call back" + numberRemoved);
+            });
+        });
+
+        console.log("Deleted correctly");
+        res.send("Deleted correctly");
     }
 
 
@@ -131,7 +145,7 @@ module.exports = function(app) {
     }
 
     getModulus = function(req,res){
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+        App.findById('55672288b7d50fce1c000001', function (err, app) {
             if (!err) {
                 console.log('GET /Modulus');
                 var keys = require('node-rsa');
@@ -151,7 +165,7 @@ module.exports = function(app) {
     };
 
     getExponent = function(req,res){
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+        App.findById('55672288b7d50fce1c000001', function (err, app) {
             if (!err) {
                 console.log('GET /Exponent');
                 var keys = require('node-rsa');
@@ -187,7 +201,7 @@ module.exports = function(app) {
             else {
 
 
-                App.findById('55080390e5f4114c13000001', function (err, app) {
+                App.findById('55672288b7d50fce1c000001', function (err, app) {
                     if (!err) {
                         var keys = require('node-rsa');
                         var pair = new keys();
@@ -213,7 +227,7 @@ module.exports = function(app) {
     app.get('/CA/users', findAllUsers);
     app.post('/CA/user/Register',addUser);
     app.post('/CA/user/Login',logUser);
-    app.delete('/CA/user/:id', deleteUser);
+    app.delete('/CA/users', deleteUsers);
     app.put('/CA/user/:id', updateUser);
     app.get('/CA/getModulus',getModulus);
     app.get('/CA/getExponent',getExponent);

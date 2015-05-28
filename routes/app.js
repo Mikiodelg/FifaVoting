@@ -1,6 +1,8 @@
 module.exports = function(app) {
 
     var App = require('../models/app/schema.js');
+    var table = require('../models/etable/schema.js');
+    var vote = require('../models/vote/schema.js');
     var big = require('big-integer');
 
     //GET - Return all users in the DB
@@ -14,7 +16,7 @@ module.exports = function(app) {
             }
         });
     };
-
+/*
     getModulus2 = function(req,res){
         App.findById('555b1ffe378a083025000002', function (err, app) {
             if (!err) {
@@ -50,9 +52,9 @@ module.exports = function(app) {
                 console.log('ERROR: ' + err);
             }
         });
-    };
+    };*/
     getPublicKey = function(req,res){
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+        App.findById('55672288b7d50fce1c000001', function (err, app) {
             if (!err) {
                 console.log('GET /PublicKey');
                 console.log('Apps: '+app);
@@ -63,38 +65,60 @@ module.exports = function(app) {
             }
         });
     };
-    getExponent = function(req,res){
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+
+    getAll = function(req,res){
+        table.find(function (err, etable) {
             if (!err) {
-                console.log('GET /Exponent');
-                var keys = require('node-rsa');
-                var pair = new keys();
-                console.log('GET PRIVATE KEY');
-                pair.importKey(app.privateKey);
-                console.log(pair);
-                res.send(app.publicKey);
+                console.log('GET /table')
+                res.send(etable);
             } else {
                 console.log('ERROR: ' + err);
             }
         });
     };
-    getModulus = function(req,res){
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+
+    getG = function(req,res){
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
             if (!err) {
-                console.log('GET /Modulus');
-                console.log('Modulus: '+app);
-                res.send(app.publicKey);
+                console.log('GET /G = '+etable.g);
+                etable.g;
+                res.send(etable.g);
             } else {
                 console.log('ERROR: ' + err);
             }
         });
+    };
+
+    getN = function(req,res){
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+            if (!err) {
+                console.log('GET /N = '+etable.n);
+                etable.n;
+                res.send(etable.n);
+            } else {
+                console.log('ERROR: ' + err);
+            }
+        });
+    };
+    aux = function (req,res){
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+                 etable.result=0;
+            etable.save(function(err) {
+                if(!err) {
+                    console.log('Updated');
+                } else {
+                    console.log('ERROR: ' + err);
+                }
+        });
+        res.send('200: Ok - Votacion abierta');
+    });
     };
 
 
     postKeys = function (req,res){
             console.log('POST');
             var keys = require('node-rsa');
-            var pair2 = new keys({b: 2048});
+            var pair2 = new keys({b: 1024});
 
             var app = new App({
                 privateKey:  pair2.exportKey('pkcs8'),
@@ -109,7 +133,9 @@ module.exports = function(app) {
                     console.log('ERROR: ' + err);
                 }
             });
+        res.send('200: Creacion de Claves correcta.')
     };
+
 
     postVote = function(req,res){
         console.log('PID: '+req.body.PID);
@@ -122,7 +148,7 @@ module.exports = function(app) {
         var vote = null;
         var digest = null;
 
-        App.findById('55080390e5f4114c13000001', function (err, app) {
+        App.findById('55672288b7d50fce1c000001', function (err, app) {
             console.log(app);
             if (!err) {
                 var keys = require('node-rsa');
@@ -254,8 +280,24 @@ module.exports = function(app) {
                 if(hashPID.toString()===decryptSign.toString()){
 
                     if(hashVote.toString()===decryptDigest.toString()){
-                        console.log('200:OK');
-                        res.send('200:OK');
+                        console.log('Guardamos el voto');
+
+                        var evote = new vote({
+                            PID: PID,
+                            sign:sign,
+                            vote: vote,
+                            digest:digest});
+                        console.log(vote);
+
+                        evote.save(function(err) {
+                            if(!err) {
+                                console.log('Voto guardado');
+                            } else {
+                                console.log('ERROR: ' + err);
+                            }
+                        });
+
+                        res.send('200:OK - Voto Guardado');
                     }
                     else {
                         console.log('402: Vote invalido.');
@@ -318,14 +360,109 @@ module.exports = function(app) {
 
     };
 
+
+    openVote = function (req,res){
+        console.log('Abroendo la votacion');
+        var bigint = require('bignum');
+        var keyLength = 1024;
+
+        var p, q, n, phi, n2;
+
+        p = bigint.prime(keyLength/2);
+        do {
+            q = bigint.prime(keyLength/2);
+            n= p.mul(q);
+
+            phi = (p.sub(1)).mul(q.sub(1));
+        } while(p.cmp(q) == 0 || n.bitLength() != keyLength || n.gcd(phi) != 1);
+        n2 = n.pow(2);
+
+        var lcm = function(a,b) {
+            return (a.mul(b)).div(a.gcd(b));
+        };
+
+        console.log('p: '+ p);
+        console.log('q: '+ q);
+        console.log('n: '+n);
+        console.log('n^2: '+n2);
+
+        var lambda = lcm( p.sub(1) , q.sub(1) );
+
+        console.log('lambda: '+ lambda);
+
+        var alpha, beta;
+        alpha = bigint.rand(n);
+
+        do {
+            beta = bigint.rand(n);
+        } while(alpha == beta);
+
+        console.log('alpha: '+alpha.toString());
+        console.log('beta: '+beta.toString());
+
+        var g = (((alpha.mul(n)).add(1)).mul(beta.powm(n,n2))).mod(n2);
+        console.log('g: '+g.toString());
+
+        var u = g.powm(lambda,n2);
+        console.log('u: '+ u);
+
+        var L = (u.sub(1)).div(n);
+        console.log('L: '+L);
+
+        var mu = L.invertm(n);
+        console.log('mu: '+mu.toString());
+
+        console.log('POST');
+        var keys = require('node-rsa');
+        var pair2 = new keys({b: 1024});
+
+        var etable = new table({
+            n: n,
+            g:g,
+            lambda:lambda,
+            mu:mu,
+            open:true});
+        console.log(etable);
+
+        etable.save(function(err) {
+            if(!err) {
+                console.log('Created');
+            } else {
+                console.log('ERROR: ' + err);
+            }
+        });
+        res.send('200: Creacion de Claves correcta.')
+
+
+
+        console.log('Claves mesa creadas, votacion abierta');
+        res.send('200: Ok - Votacion abierta');
+    };
+
+    deleteVotes = function (req,res) {
+
+        vote.collection('vote', function(err, collection) {
+            collection.remove();
+
+            console.log('200: OK - Votos Borrados, urna vacía');
+            res.send('200: OK - Votos Borrados, urna vacía');
+        });
+    };
+
     app.get('/apps', getKey);
     app.get('/publicKey', getPublicKey);
-    app.get('/getExponent', getExponent);
-    app.get('/getModulus', getModulus);
-    app.get('/EU/getExponent', getExponent2);
-    app.get('/EU/getModulus', getModulus2);
+    app.get('/EU/getG', getG);
+    app.get('/EU/getN', getN);
+//    app.get('/EU/getExponent', getExponent2);
+//    app.get('/EU/getModulus', getModulus2);
     app.post('/apps/register',postKeys);
     app.post('/EU/Evote',postVote);
+    app.post('/EU/Open',openVote);
+    app.get('/EU/getall',getAll);
+    app.get('/EU/aux',aux);
+    app.delete('/EU/deleteVotes', deleteVotes);
+//    app.post('/EU/Close',closeVote);
+//    app.get('/EU/results',getResults);
 };
 
 

@@ -4,7 +4,7 @@
 var bigint = require('bignum');
 var big = require('big-integer');
 //var browser = require ('browserify-bignum');
-var keyLength = 512;
+var keyLength = 1024;
 
 //var p = 11;  // <- Posible primo valido
 //var q = 13; // <- Posible primo valido
