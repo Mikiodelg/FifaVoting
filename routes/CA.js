@@ -28,7 +28,8 @@ module.exports = function(app) {
 
         var user = new User({
             username:    req.body.username,
-            password: 	 req.body.password
+            password: 	 req.body.password,
+            signed: false
         });
 
         user.save(function(err) {
@@ -51,7 +52,6 @@ module.exports = function(app) {
             var user = new User({
                 username:    req.body.username,
                 password: 	 req.body.password
-                //pair.encryptPrivate(req.body.username, 'pkcs8')
             });
             console.log('User: '+user.username+' Pass: '+user.password);
             var token = new String;
@@ -61,25 +61,47 @@ module.exports = function(app) {
                 if (userdb != null) {
                     console.log('User Found');
                     console.log(userdb);
-                    if(userdb.password === user.password){
+                    if (userdb.password === user.password) {
                         console.log('Password Correct');
-                        //Metodo generacion Token Token
-                        var moment = require('moment');
-                        var expires = moment().add(1,'days').valueOf();
-                        var token = jwt.encode(expires,appjwt.get('jwtTokenSecret'));
-                        console.log('Token Expires: '+moment(expires).format('MMMM Do YYYY, h:mm:ss a'));
-                        res.json({
-                            token : token,
-                            expires: moment(jwt.decode(token, appjwt.get('jwtTokenSecret'))).format('MMMM Do YYYY, h:mm:ss a')
-                        });
 
-                    }
-                    else{
-                        console.log('ERROR: Password Incorrect - ');
-                        res.json({
-                            token : "ERROR",
-                            expires: "Password Incorrect"
-                        });
+                        if (userdb.signed == true) {
+                            console.log('ERROR: User already logged - ');
+                            res.json({
+                                token : "ERROR",
+                                expires: "User already logged"
+                            });
+                        }
+                        if(userdb.signed != true){
+                            //Metodo generacion Token Token
+                            var moment = require('moment');
+                            var expires = moment().add(1, 'days').valueOf();
+                            var token = jwt.encode(expires, appjwt.get('jwtTokenSecret'));
+
+                            console.log('updating user - Signed = true');
+                            userdb.signed = true;
+                            userdb.save(function (err) {
+                                if (!err) {
+                                    console.log('Updated');
+                                } else {
+                                    console.log('ERROR: ' + err);
+                                }
+                            });
+
+                            console.log('Token Expires: ' + moment(expires).format('MMMM Do YYYY, h:mm:ss a'));
+
+                            res.json({
+                                token: token,
+                                expires: moment(jwt.decode(token, appjwt.get('jwtTokenSecret'))).format('MMMM Do YYYY, h:mm:ss a')
+                            });
+
+                        }
+                        else {
+                            console.log('ERROR: Password Incorrect - ');
+                            res.json({
+                                token: "ERROR",
+                                expires: "Password Incorrect"
+                            });
+                        }
                     }
                 }
                 else {
@@ -95,12 +117,27 @@ module.exports = function(app) {
 
 
     };
+    logoff = function(req, res) {
+        User.findOne({ 'username': req.body.username }, function(err, userdb) {
+            console.log('User: ' + userdb.username);
+            userdb.signed = false;
+            userdb.save(function (err) {
+                if (!err) {
+                    console.log('Updated');
+                } else {
+                    console.log('ERROR: ' + err);
+                }
+            });
+            console.log('User Logged off');
+            res.send("200:OK");
+        });
+    };
 
     //DELETE - Delete a TVShow with specified ID
     deleteUsers = function(req, res) {
         User.find(function (err, users) {
             if (!err) {
-                console.log('Delete /users')
+                console.log('Delete /users');
                 users.dropCollection();
                     console.log("inside remove call back" + numberRemoved);
 
@@ -204,6 +241,7 @@ module.exports = function(app) {
                         res.send(sign);
                         console.log('firmado');
                         console.log('-----------');
+
                     } else {
                         console.log('ERROR: ' + err);
                     }
@@ -221,4 +259,5 @@ module.exports = function(app) {
     app.get('/CA/getModulus',getModulus);
     app.get('/CA/getExponent',getExponent);
     app.post('/CA/signCA', signCA);
+    app.post('/CA/logoff', logoff);
 }
