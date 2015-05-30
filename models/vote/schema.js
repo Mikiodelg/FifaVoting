@@ -6,11 +6,11 @@ var mongoose = require('mongoose')
     , ObjectId = Schema.ObjectId;
 
 
-var Votechema = new Schema({
+var Voteschema = new Schema({
     PID: {type:String},
-    sign:{type:String},
+    sign: {type:String},
     vote: {type:String},
-    digest:{type:String}
+    digest: {type:String}
 });
 
-module.exports = mongoose.model('Vote', Votechema);
+module.exports = mongoose.model('Vote', Voteschema);

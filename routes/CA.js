@@ -98,31 +98,20 @@ module.exports = function(app) {
 
     //DELETE - Delete a TVShow with specified ID
     deleteUsers = function(req, res) {
-        /*User.findById(req.params.id, function(err, user) {
-            user.remove(function(err) {
-                if(!err) {
-                    console.log('Removed');
+        User.find(function (err, users) {
+            if (!err) {
+                console.log('Delete /users')
+                users.dropCollection();
+                    console.log("inside remove call back" + numberRemoved);
+
+                    console.log("Deleted correctly");
                     res.send("Deleted correctly");
-                } else {
-                    console.log('ERROR: ' + err);
-                    res.send("Deleted correctly");
-                }
-            })
-        });
-        */
-        var Db = require('mongodb').Db;
-        var Server = require('mongodb').Server;
-        var db = new Db('test', new Server('localhost', 27017));
-// Establish connection to db
-        db.open(function(err, db) {
-            var usersdelete = db.collection("user");
-            usersdelete.remove({},function(err,numberRemoved){
-                console.log("inside remove call back" + numberRemoved);
-            });
+
+            } else {
+                console.log('ERROR: ' + err);
+            }
         });
 
-        console.log("Deleted correctly");
-        res.send("Deleted correctly");
     }
 
 

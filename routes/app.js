@@ -137,228 +137,256 @@ module.exports = function(app) {
     };
 
 
-    postVote = function(req,res){
-        console.log('PID: '+req.body.PID);
-        console.log('sign: '+req.body.sign);
-        console.log('vote: '+req.body.vote);
-        console.log('digest: '+req.body.digest);
-
-        var PID = null;
-        var sign = null;
-        var vote = null;
-        var digest = null;
-
-        App.findById('55672288b7d50fce1c000001', function (err, app) {
-            console.log(app);
-            if (!err) {
-                var keys = require('node-rsa');
-                var pair = new keys();
-                console.log('GET PRIVATE KEY');
-                pair.importKey(app.privateKey);
+    postVote = function(req,res) {
 
 
+        var PID = 'req.body.PID';
+        var sign = req.body.sign;
+        var vote = req.body.vote;
+        var digest = req.body.digest;
 
-                PID = pair.exportKey('pkcs8-public-pem');
-                console.log('PID pkcs8');
-                console.log(PID);
+        console.log('PID: ' + PID);
+        console.log('sign: ' + sign);
+        console.log('vote: ' + vote);
+        console.log('digest: ' + digest);
 
+        var open = false;
+        console.log('comprobamos si esta abierta');
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+            console.log('Mesa:');
+            console.log(etable.open);
+            if (etable.open == true) {
+                open = true;
+            }
 
-                //Importar la clave desde pkcs8
+        console.log('mesa despues de encontrar: ' + open);
+        if (open == true) {
+            console.log('mesa abierta, miramos si has votado');
+            var evote = require('../models/vote/schema.js');
 
-                var pair2 = new keys();
-                pair2.importKey(req.body.PID);
-                console.log('PID: '+PID);
-                console.log('------------------');
-                var PIDe = pair2.keyPair.e.toString();
-                console.log('PIDe: ' + PIDe);
-                console.log('------------------');
+            evote.findOne({ 'PID': PID }, function(err, votedb) {
+                console.log(votedb);
+            if (votedb != null) {
+                console.log('Ya has votado');
+                res.send('400: Ya has votado');
+            }
+                else {
+                console.log('Mesa abierta y no has votado');
 
-                var PIDn =pair2.keyPair.n.toString();
-                console.log('PIDn: '+ PIDn);
-                console.log('------------------');
+                App.findById('55672288b7d50fce1c000001', function (err, app) {
 
+                    console.log(app);
+                    if (!err) {
+                        var keys = require('node-rsa');
+                        var pair = new keys();
+                        console.log('GET PRIVATE KEY');
+                        pair.importKey(app.privateKey);
 
-                //fin importar
-
-
-                var presign = require("crypto")
-                    .createHash("sha1")
-                    .update(PID)
-                    .digest("hex");
-                presign=big(presign,16);
-                console.log('Hash: ' + presign);
-                sign = (big(presign).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
-                console.log('sign Generado');
-                console.log('------------------');
-
-
-
-                vote = (big("voto",16).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
-                console.log('vote Generado');
-                console.log('------------------');
-
-                var predigest = require("crypto")
-                    .createHash("sha1")
-                    .update(vote)
-                    .digest("hex");
-                predigest=big(predigest,16);
-                digest =  (big(predigest).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
-
-                //Fin Aux
-
-                //
-                //Importar la clave desde pkcs8
-                console.log('Importando Key Publica');
-                var pair2 = new keys();
-                pair2.importKey(req.body.PID);
-                console.log('PID: '+PID);
-                console.log('------------------');
-                var PIDe = pair2.keyPair.e.toString();
-                console.log('PIDe: ' + PIDe);
-                console.log('------------------');
-
-                var PIDn =pair2.keyPair.n.toString();
-                console.log('PIDn: '+ PIDn);
-                console.log('------------------');
+                        PID = pair.exportKey('pkcs8-public-pem');
+                        console.log('PID pkcs8');
+                        console.log(PID);
 
 
-                //fin importar
+                        //Importar la clave desde pkcs8
+
+                        var pair2 = new keys();
+                        pair2.importKey(req.body.PID);
+                        console.log('PID: ' + PID);
+                        console.log('------------------');
+                        var PIDe = pair2.keyPair.e.toString();
+                        console.log('PIDe: ' + PIDe);
+                        console.log('------------------');
+
+                        var PIDn = pair2.keyPair.n.toString();
+                        console.log('PIDn: ' + PIDn);
+                        console.log('------------------');
 
 
-                //fin importar
+                        //fin importar
 
 
-                //
-
-                //Inicio
-                console.log('------------------');
-                console.log('PID: ');
-                console.log(PID);
-                console.log('PIDe: ');
-                console.log(PIDe);
-                console.log('PIDn: ');
-                console.log(PIDn);
-                console.log('sign: ');
-                console.log(sign);
-                console.log('vote: ');
-                console.log(vote);
-                console.log('digest:');
-                console.log(digest);
-                console.log('------------------');
-
-                //Decrypt Sign + hash + compare
-
-                var decryptSign = (big(sign).modPow(pair.keyPair.e, pair.keyPair.n));
-                var hashPID = require("crypto")
-                    .createHash("sha1")
-                    .update(PID)
-                    .digest("hex");
-                hashPID = big(hashPID,16).toString();
-                console.log('HashPID:');
-                console.log(hashPID.toString());
-                console.log('decrypt Sign:');
-                console.log(decryptSign.toString());
-
-                console.log('------------------');
-
-                //Decrypt Dogest + hash + compare
-
-                var decryptDigest = (big(digest).modPow(PIDe, PIDn));
-                var hashVote = require("crypto")
-                    .createHash("sha1")
-                    .update(vote)
-                    .digest("hex");
-                hashVote = big(hashVote,16).toString();
-                console.log('HashVote:');
-                console.log(hashVote.toString());
-                console.log('decrypt Vote:');
-                console.log(decryptDigest.toString());
-
-                console.log('------------------');
+                        var presign = require("crypto")
+                            .createHash("sha1")
+                            .update(PID)
+                            .digest("hex");
+                        presign = big(presign, 16);
+                        console.log('Hash: ' + presign);
+                        sign = (big(presign).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
+                        console.log('sign Generado');
+                        console.log('------------------');
 
 
-                if(hashPID.toString()===decryptSign.toString()){
+                        vote = (big("voto", 16).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
+                        console.log('vote Generado');
+                        console.log('------------------');
 
-                    if(hashVote.toString()===decryptDigest.toString()){
-                        console.log('Guardamos el voto');
+                        var predigest = require("crypto")
+                            .createHash("sha1")
+                            .update(vote)
+                            .digest("hex");
+                        predigest = big(predigest, 16);
+                        digest = (big(predigest).modPow(pair.keyPair.d, pair.keyPair.n)).toString();
 
-                        var evote = new vote({
-                            PID: PID,
-                            sign:sign,
-                            vote: vote,
-                            digest:digest});
+                        //Fin Aux
+
+                        //
+                        //Importar la clave desde pkcs8
+                        console.log('Importando Key Publica');
+                        var pair2 = new keys();
+                        pair2.importKey(req.body.PID);
+                        console.log('PID: ' + PID);
+                        console.log('------------------');
+                        var PIDe = pair2.keyPair.e.toString();
+                        console.log('PIDe: ' + PIDe);
+                        console.log('------------------');
+
+                        var PIDn = pair2.keyPair.n.toString();
+                        console.log('PIDn: ' + PIDn);
+                        console.log('------------------');
+
+
+                        //fin importar
+
+
+                        //fin importar
+
+
+                        //
+
+                        //Inicio
+                        console.log('------------------');
+                        console.log('PID: ');
+                        console.log(PID);
+                        console.log('PIDe: ');
+                        console.log(PIDe);
+                        console.log('PIDn: ');
+                        console.log(PIDn);
+                        console.log('sign: ');
+                        console.log(sign);
+                        console.log('vote: ');
                         console.log(vote);
+                        console.log('digest:');
+                        console.log(digest);
+                        console.log('------------------');
 
-                        evote.save(function(err) {
-                            if(!err) {
-                                console.log('Voto guardado');
-                            } else {
-                                console.log('ERROR: ' + err);
+                        //Decrypt Sign + hash + compare
+
+                        var decryptSign = (big(sign).modPow(pair.keyPair.e, pair.keyPair.n));
+                        var hashPID = require("crypto")
+                            .createHash("sha1")
+                            .update(PID)
+                            .digest("hex");
+                        hashPID = big(hashPID, 16).toString();
+                        console.log('HashPID:');
+                        console.log(hashPID.toString());
+                        console.log('decrypt Sign:');
+                        console.log(decryptSign.toString());
+
+                        console.log('------------------');
+
+                        //Decrypt Dogest + hash + compare
+
+                        var decryptDigest = (big(digest).modPow(PIDe, PIDn));
+                        var hashVote = require("crypto")
+                            .createHash("sha1")
+                            .update(vote)
+                            .digest("hex");
+                        hashVote = big(hashVote, 16).toString();
+                        console.log('HashVote:');
+                        console.log(hashVote.toString());
+                        console.log('decrypt vote:');
+                        console.log(decryptDigest.toString());
+
+                        console.log('------------------');
+
+
+                        if (hashPID.toString() === decryptSign.toString()) {
+
+                            if (hashVote.toString() === decryptDigest.toString()) {
+                                console.log('Guardamos el voto');
+
+                                var evote = new vote({
+                                    PID: PID,
+                                    sign: sign,
+                                    vote: vote,
+                                    digest: digest
+                                });
+                                console.log(vote);
+
+                                evote.save(function (err) {
+                                    if (!err) {
+                                        console.log('Voto guardado');
+                                    } else {
+                                        console.log('ERROR: ' + err);
+                                    }
+                                });
+
+                                res.send('200:OK - Voto Guardado');
                             }
-                        });
+                            else {
+                                console.log('402: vote invalido.');
+                                res.send('402: vote invalido.');
+                            }
+                        }
+                        else
+                            console.log('401: Sign invalido.');
+                        res.send('401: Sign invalido.')
 
-                        res.send('200:OK - Voto Guardado');
+                    } else {
+                        console.log('ERROR: ' + err);
+                        res.send('Error: ' + err);
                     }
-                    else {
-                        console.log('402: Vote invalido.');
-                        res.send('402: Vote invalido.');
-                    }
-                }
-                else
-                    console.log('401: Sign invalido.');
-                    res.send('401: Sign invalido.')
 
-            } else {
-                console.log('ERROR: ' + err);
-                res.send('Error: '+err);
+                });
             }
+
+            //Operaciones aux
+
+            /*
+             //Hacer Hash a algo
+
+             var PID1 = require("crypto")
+             .createHash("sha1")
+             .update(req.body.PID)
+             .digest("hex");
+             PID1=big(PID1,16);
+             console.log('Hash: ' + PID1);
+             console.log('------------------');
+
+
+
+             //encrypt
+             App.findById('55080390e5f4114c13000001', function (err, app) {
+             if (!err) {
+             var keys = require('node-rsa');
+             var pair = new keys();
+             console.log('GET PRIVATE KEY');
+             pair.importKey(app.privateKey);
+             console.log('Potencia D modulo N');
+             var cryptPID = (big(PID1).modPow(pair.keyPair.d, pair.keyPair.n));
+             console.log(cryptPID);
+
+             console.log('------------------');
+
+             //decrypt
+             console.log(pair.keypair);
+             var decryptPID = (big(cryptPID).modPow(pair.keyPair.e, pair.keyPair.n));
+             console.log(decryptPID);
+             console.log('compare');
+             console.log(PID);
+             console.log('------------------');
+             } else {
+             console.log('ERROR: ' + err);
+             }
+             });
+             */
+            });
+        };
+
+
         });
+    }
 
-
-
-
-        //Operaciones aux
-
-        /*
-        //Hacer Hash a algo
-
-        var PID1 = require("crypto")
-            .createHash("sha1")
-            .update(req.body.PID)
-            .digest("hex");
-        PID1=big(PID1,16);
-        console.log('Hash: ' + PID1);
-        console.log('------------------');
-
-
-
-        //encrypt
-        App.findById('55080390e5f4114c13000001', function (err, app) {
-            if (!err) {
-                var keys = require('node-rsa');
-                var pair = new keys();
-                console.log('GET PRIVATE KEY');
-                pair.importKey(app.privateKey);
-                console.log('Potencia D modulo N');
-                var cryptPID = (big(PID1).modPow(pair.keyPair.d, pair.keyPair.n));
-                console.log(cryptPID);
-
-                console.log('------------------');
-
-                //decrypt
-                console.log(pair.keypair);
-                var decryptPID = (big(cryptPID).modPow(pair.keyPair.e, pair.keyPair.n));
-                console.log(decryptPID);
-                console.log('compare');
-                console.log(PID);
-                console.log('------------------');
-            } else {
-                console.log('ERROR: ' + err);
-            }
-        });
-         */
-
-    };
 
 
     openVote = function (req,res){
