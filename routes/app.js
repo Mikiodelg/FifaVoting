@@ -102,6 +102,7 @@ module.exports = function(app) {
     };
     aux = function (req,res){
         table.findById('5567286436e9dadc1e000001', function (err, etable) {
+                 etable.open=true;
                  etable.result=0;
             etable.save(function(err) {
                 if(!err) {
@@ -467,15 +468,200 @@ module.exports = function(app) {
         res.send('200: Ok - Votacion abierta');
     };
 
-    deleteVotes = function (req,res) {
+    getResults = function (req,res) {
 
-        vote.collection('vote', function(err, collection) {
-            collection.remove();
+        function padL(a,b,c){//string/number,length=2,char=0
+            return (new Array(b||2).join(c||0)+a).slice(-b)
+        }
 
-            console.log('200: OK - Votos Borrados, urna vacía');
-            res.send('200: OK - Votos Borrados, urna vacía');
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+            if (!err) {
+                console.log('GET /results = '+etable.result);
+
+                var bigint = require('bignum');
+                var n=bigint(etable.n);
+                var n2 = n.pow(2);
+                var mu = bigint(etable.mu);
+                var lambda = bigint(etable.lambda);
+                var ctotal = bigint(etable.result);
+
+                var u1 = ctotal.powm(lambda,n2);
+                var L1 = (u1.sub(1)).div(n);
+
+                var mtotal =(L1.mul(mu)).mod(n);
+                console.log('mtotal: '+mtotal.toString());
+
+                console.log('lenght: '+ mtotal.toString().length);
+                var mtotalpad = padL(mtotal.toString(),22);
+                console.log('mtotalpad: '+mtotalpad);
+
+                var arrayres= new Array(10);
+                var j = 0;
+                var i = 0;
+                while(i<22){
+                    arrayres[j]= mtotalpad.toString().substring(i, i + 2);
+                    console.log(mtotalpad.toString().substring(i, i + 2));
+                    i=i+2;
+                    j++;
+            }
+                console.log('arrayres: '+arrayres);
+
+                res.send(mtotalpad);
+            } else {
+                console.log('ERROR: ' + err);
+            }
         });
     };
+
+    closeVote = function (req,res) {
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+            console.log('table: ' + etable);
+            etable.open = false;
+
+            vote.find(function (err, votes) {
+                var bigint = require('bignum');
+                var n=bigint(etable.n);
+                var n2 = n.pow(2);
+
+                var resul=bigint(votes[0].vote);
+                for (i=1;i<votes.length;i++){
+                    resul = (resul.mul(votes[i].vote)).mod(n2);
+                }
+                etable.result = resul;
+
+                etable.save(function (err) {
+                if (!err) {
+                    console.log('Updated');
+                } else {
+                    console.log('ERROR: ' + err);
+                }
+            });
+            console.log('Votacion Cerrada');
+            res.send("200:OK");
+            });
+        });
+    };
+
+    createVotes = function(req,res){
+
+        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+            var bigint = require('bignum');
+            var big = require('big-integer');
+            var contador=0;
+            var Cvote;
+            var n=bigint(etable.n);
+            var n2 = n.pow(2);
+            var g=bigint(etable.g);
+            var m;
+            var r;
+
+            console.log('g: '+g);
+            console.log('n: '+n);
+            console.log('n2: '+n2);
+            for (i = 0; i < 6; i++) {
+
+                contador++;
+                console.log('voto numero: ' + contador);
+                m = Math.pow(100, 8);
+                r = bigint.rand(n);
+                Cvote= ((g.powm(m,n2)).mul(r.powm(n,n2))).mod(n2);
+                console.log('Cvote: ' + Cvote);
+                var evote = new vote({
+                    PID: 'prueba',
+                    sign: 'prueba',
+                    vote: Cvote,
+                    digest: 'prueba'
+                });
+                console.log(evote);
+                evote.save(function (err) {
+                    if (!err) {
+                        console.log('Voto guardado');
+                    } else {
+                        console.log('ERROR: ' + err);
+                    }
+                });
+                console.log('voto guardado');
+                console.log('---------');
+
+            }
+            for (i = 0; i < 3; i++) {
+
+                contador++;
+                console.log('voto numero: ' + contador);
+                m = Math.pow(100, 1);
+                r = bigint.rand(n);
+                Cvote= ((g.powm(m,n2)).mul(r.powm(n,n2))).mod(n2);
+                console.log('Cvote: ' + Cvote);
+                var evote = new vote({
+                    PID: 'prueba',
+                    sign: 'prueba',
+                    vote: Cvote,
+                    digest: 'prueba'
+                });
+                console.log(evote);
+                evote.save(function (err) {
+                    if (!err) {
+                        console.log('Voto guardado');
+                    } else {
+                        console.log('ERROR: ' + err);
+                    }
+                });
+                console.log('voto guardado');
+                console.log('---------');
+            }
+            for (i = 0; i < 1; i++) {
+
+                contador++;
+                console.log('voto numero: ' + contador);
+                m = Math.pow(100, 5);
+                r = bigint.rand(n);
+                Cvote= ((g.powm(m,n2)).mul(r.powm(n,n2))).mod(n2);
+                console.log('Cvote: ' + Cvote);
+                var evote = new vote({
+                    PID: 'prueba',
+                    sign: 'prueba',
+                    vote: Cvote,
+                    digest: 'prueba'
+                });
+                console.log(evote);
+                evote.save(function (err) {
+                    if (!err) {
+                        console.log('Voto guardado');
+                    } else {
+                        console.log('ERROR: ' + err);
+                    }
+                });
+                console.log('voto guardado');
+                console.log('---------');
+            }
+            for (i = 0; i < 1; i++) {
+
+                contador++;
+                console.log('voto numero: ' + contador);
+                m = Math.pow(100, 4);
+                r = bigint.rand(n);
+                Cvote= ((g.powm(m,n2)).mul(r.powm(n,n2))).mod(n2);
+                console.log('Cvote: ' + Cvote);
+                var evote = new vote({
+                    PID: 'prueba',
+                    sign: 'prueba',
+                    vote: Cvote,
+                    digest: 'prueba'
+                });
+                console.log(evote);
+                evote.save(function (err) {
+                    if (!err) {
+                        console.log('Voto guardado');
+                    } else {
+                        console.log('ERROR: ' + err);
+                    }
+                });
+                console.log('voto guardado');
+                console.log('---------');
+            }
+        });
+        res.send("200:OK");
+    }
 
     app.get('/apps', getKey);
     app.get('/publicKey', getPublicKey);
@@ -487,10 +673,12 @@ module.exports = function(app) {
     app.post('/EU/Evote',postVote);
     app.post('/EU/Open',openVote);
     app.get('/EU/getall',getAll);
+
+    app.get('/EU/Close',closeVote);
+    app.get('/EU/results',getResults);
+    //Op Aux
     app.get('/EU/aux',aux);
-    app.delete('/EU/deleteVotes', deleteVotes);
-//    app.post('/EU/Close',closeVote);
-//    app.get('/EU/results',getResults);
+    app.get('/EU/Aux/CreateVotes', createVotes);
 };
 
 

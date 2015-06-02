@@ -95,3 +95,7 @@ console.log('L1: '+L1.toString());
 //var mtotal = bigint(bigint(L1).multiply(mu)).mod(n);
 var mtotal =(L1.mul(mu)).mod(n);
 console.log('mtotal: '+mtotal.toString());
+
+var mprueba = Math.pow(100, 8); ;
+console.log('mprueba: '+mprueba.toString());
+

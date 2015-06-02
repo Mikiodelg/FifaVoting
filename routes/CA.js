@@ -4,6 +4,7 @@ module.exports = function(app) {
     var App = require('../models/app/schema.js');
     var jwt = require('jwt-simple');
     var express = require('express');
+    var bigint = require('bignum');
     var appjwt = express();
     appjwt.set('jwtTokenSecret', 'FifaVoting');
 
