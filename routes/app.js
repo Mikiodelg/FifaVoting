@@ -507,16 +507,16 @@ module.exports = function(app) {
                 console.log('mtotal: '+mtotal.toString());
 
                 console.log('lenght: '+ mtotal.toString().length);
-                var mtotalpad = padL(mtotal.toString(),22);
+                var mtotalpad = padL(mtotal.toString(),20);
                 console.log('mtotalpad: '+mtotalpad);
                 console.log('----------');
                 var arrayres= new Array(10);
                 var arrayname= new Array(10);
-                arrayname = ['Bravo','Alba','Mascherano','Pique','Alves','Busquets','Iniesta','Xavi','Neymar','Suarez','Messi'];
+                arrayname = ['Alba','Mascherano','Pique','Alves','Busquets','Iniesta','Xavi','Neymar','Suarez','Messi'];
 
                 var i = 0;
                 var j = 0;
-                while(i<22) {
+                while(i<20) {
                     arrayres[j] = mtotalpad.toString().substring(i, i + 2);
                     console.log(arrayname[j]);
                     console.log(mtotalpad.toString().substring(i, i + 2));
@@ -889,9 +889,9 @@ module.exports = function(app) {
                                 case 'Alba':
                                     candidatoparseado=9;
                                     break;
-                                case 'Bravo':
+                                /*case 'Bravo':
                                     candidatoparseado=10;
-                                    break;
+                                    break;*/
                                 default:
                                     res.send("Jugador invalido, usa uno de los siguientes: ['Bravo','Alba','Mascherano','Pique','Alves','Busquets','Iniesta','Xavi','Neymar','Suarez','Messi']");
                                     break;
