@@ -5,6 +5,7 @@ module.exports = function(app) {
     var jwt = require('jwt-simple');
     var express = require('express');
     var bigint = require('bignum');
+    var bignum = require('bignum');
     var appjwt = express();
     appjwt.set('jwtTokenSecret', 'FifaVoting');
 
@@ -26,24 +27,37 @@ module.exports = function(app) {
     addUser = function(req, res) {
         console.log('POST');
         console.log(req.body);
+        hpass = require("crypto")
+
+            .createHash("sha1")
+            .update(req.body.password)
+            .digest("hex");
 
         var user = new User({
             username:    req.body.username,
-            password: 	 req.body.password,
+            password: 	 hpass,
             signed: false
         });
+        User.findOne({ 'username': user.username }, function(err, userdb) {
+            if (userdb != null) {
 
-        user.save(function(err) {
-            if(!err) {
-                console.log('Created');
-            } else {
-                console.log('ERROR: ' + err);
+                res.send('Error: Username already taken');
+
             }
+            else{
+                user.save(function (err) {
+                    if (!err) {
+                        console.log('Created');
+                    } else {
+                        console.log('ERROR: ' + err);
+                    }
 
-            //pair.encryptPrivate(req.body.username, 'pkcs8')
+                    //pair.encryptPrivate(req.body.username, 'pkcs8')
+                });
+
+                res.send(user);
+            }
         });
-
-        res.send(user);
     }
 
         //POST - Insert a new User in the DB
@@ -74,6 +88,7 @@ module.exports = function(app) {
                         }
                         if(userdb.signed != true){
                             //Metodo generacion Token Token
+                            console.log('Signing - ');
                             var moment = require('moment');
                             var expires = moment().add(1, 'days').valueOf();
                             var token = jwt.encode(expires, appjwt.get('jwtTokenSecret'));
@@ -96,13 +111,13 @@ module.exports = function(app) {
                             });
 
                         }
-                        else {
-                            console.log('ERROR: Password Incorrect - ');
-                            res.json({
-                                token: "ERROR",
-                                expires: "Password Incorrect"
-                            });
-                        }
+                    }
+                    else {
+                        console.log('ERROR: Password Incorrect - ');
+                        res.json({
+                            token: "ERROR",
+                            expires: "Password Incorrect"
+                        });
                     }
                 }
                 else {

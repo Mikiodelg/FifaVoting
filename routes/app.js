@@ -3,7 +3,8 @@ module.exports = function(app) {
     var App = require('../models/app/schema.js');
     var table = require('../models/etable/schema.js');
     var vote = require('../models/vote/schema.js');
-    var big = require('big-integer');
+    var bigint = require('big-integer');
+    var bignum = require('bignum');
 
     //GET - Return all users in the DB
     getKey = function (req, res) {
@@ -141,15 +142,16 @@ module.exports = function(app) {
     postVote = function(req,res) {
 
 
-        var PID = 'req.body.PID';
+        var PID = req.body.PID;
         var sign = req.body.sign;
         var vote = req.body.vote;
         var digest = req.body.digest;
-
+        console.log('Entra');
         console.log('PID: ' + PID);
         console.log('sign: ' + sign);
         console.log('vote: ' + vote);
         console.log('digest: ' + digest);
+        console.log('-----');
 
         var open = false;
         console.log('comprobamos si esta abierta');
@@ -183,15 +185,19 @@ module.exports = function(app) {
                         console.log('GET PRIVATE KEY');
                         pair.importKey(app.privateKey);
 
-                        PID = pair.exportKey('pkcs8-public-pem');
-                        console.log('PID pkcs8');
-                        console.log(PID);
+
 
 
                         //Importar la clave desde pkcs8
 
+
                         var pair2 = new keys();
                         pair2.importKey(req.body.PID);
+
+                        PID = pair2.exportKey('pkcs8-public-pem');
+                        console.log('PID pkcs8');
+                        console.log(PID);
+
                         console.log('PID: ' + PID);
                         console.log('------------------');
                         var PIDe = pair2.keyPair.e.toString();
@@ -205,8 +211,9 @@ module.exports = function(app) {
 
                         //fin importar
 
+                /*
+                    presign = require("crypto")
 
-                        var presign = require("crypto")
                             .createHash("sha1")
                             .update(PID)
                             .digest("hex");
@@ -269,14 +276,20 @@ module.exports = function(app) {
                         console.log('digest:');
                         console.log(digest);
                         console.log('------------------');
-
+                 */
                         //Decrypt Sign + hash + compare
 
-                        var decryptSign = (big(sign).modPow(pair.keyPair.e, pair.keyPair.n));
+                        console.log('Decrypt sign + hash:');
+
+                        var signpid = req.body.sign;
+                        console.log('signpid sin desencriptar:'+signpid.toString());
+                        var decryptSign = (big(signpid).modPow(pair.keyPair.e, pair.keyPair.n));
+                        console.log('signpid con  desencriptar:'+decryptSign.toString());
                         var hashPID = require("crypto")
                             .createHash("sha1")
                             .update(PID)
                             .digest("hex");
+                        console.log('hash primero:'+hashPID);
                         hashPID = big(hashPID, 16).toString();
                         console.log('HashPID:');
                         console.log(hashPID.toString());
@@ -286,8 +299,10 @@ module.exports = function(app) {
                         console.log('------------------');
 
                         //Decrypt Dogest + hash + compare
+                        var vote = req.body.vote;
+                        var digestvote = (req.body.digest);
 
-                        var decryptDigest = (big(digest).modPow(PIDe, PIDn));
+                        var decryptDigest = (big(digestvote).modPow(PIDe, PIDn));
                         var hashVote = require("crypto")
                             .createHash("sha1")
                             .update(vote)
@@ -494,19 +509,30 @@ module.exports = function(app) {
                 console.log('lenght: '+ mtotal.toString().length);
                 var mtotalpad = padL(mtotal.toString(),22);
                 console.log('mtotalpad: '+mtotalpad);
-
+                console.log('----------');
                 var arrayres= new Array(10);
-                var j = 0;
-                var i = 0;
-                while(i<22){
-                    arrayres[j]= mtotalpad.toString().substring(i, i + 2);
-                    console.log(mtotalpad.toString().substring(i, i + 2));
-                    i=i+2;
-                    j++;
-            }
-                console.log('arrayres: '+arrayres);
+                var arrayname= new Array(10);
+                arrayname = ['Bravo','Alba','Mascherano','Pique','Alves','Busquets','Iniesta','Xavi','Neymar','Suarez','Messi'];
 
-                res.send(mtotalpad);
+                var i = 0;
+                var j = 0;
+                while(i<22) {
+                    arrayres[j] = mtotalpad.toString().substring(i, i + 2);
+                    console.log(arrayname[j]);
+                    console.log(mtotalpad.toString().substring(i, i + 2));
+                    i = i + 2;
+                    j++;
+                }
+
+                var jsonArr = [];
+
+                for (var k = 0; k < arrayname.length; k++) {
+                    jsonArr.push({
+                        name: arrayname[k],
+                        votes: arrayres[k]
+                    });
+                }
+                res.send(jsonArr);
             } else {
                 console.log('ERROR: ' + err);
             }
@@ -546,7 +572,7 @@ module.exports = function(app) {
 
         table.findById('5567286436e9dadc1e000001', function (err, etable) {
             var bigint = require('bignum');
-            var big = require('big-integer');
+            var big= require('big-integer');
             var contador=0;
             var Cvote;
             var n=bigint(etable.n);
@@ -663,6 +689,365 @@ module.exports = function(app) {
         res.send("200:OK");
     }
 
+    simul = function(req,res) {
+        var User = require('../models/user/schema.js');
+        var jwt = require('jwt-simple');
+        var express = require('express');
+        var appjwt = express();
+        appjwt.set('jwtTokenSecret', 'FifaVoting');
+
+        console.log('Iniciamos la simulación');
+        console.log('Recibimos:');
+        console.log('Username: ' +req.body.username);
+        console.log('Password en claro: ' +req.body.password);
+        console.log('Voto al candidato: ' +req.body.vote);
+
+        hpass = require("crypto")
+
+            .createHash("sha1")
+            .update(req.body.password)
+            .digest("hex");
+
+        var user = new User({
+            username:    req.body.username,
+            password: 	 hpass
+        });
+        console.log('----');
+        console.log('User: '+user.username+' Pass: '+user.password);
+
+        var token = new String;
+
+        console.log('Find one: ----------');
+        User.findOne({ 'username': user.username }, function(err, userdb) {
+            if (userdb != null) {
+                console.log('User Found');
+                console.log(userdb);
+                console.log('----------- Password correct?: ----------');
+                console.log('Password: '+user.password);
+                console.log('Password DB: '+userdb.password);
+                if (userdb.password === user.password) {
+                    console.log('Password Correct');
+
+                    if (userdb.signed == true) {
+                        console.log('ERROR: User already logged - ');
+                        res.json({
+                            token: "ERROR",
+                            expires: "User already logged"
+                        });
+                    }
+                    if (userdb.signed != true) {
+                        //Metodo generacion Token Token
+                        var moment = require('moment');
+                        var expires = moment().add(1, 'days').valueOf();
+                        var token = jwt.encode(expires, appjwt.get('jwtTokenSecret'));
+
+                        console.log('Usuario logueado: updating user - Signed = true');
+                        userdb.signed = false;
+                        userdb.save(function (err) {
+                            if (!err) {
+                                //console.log('Updated');
+                            } else {
+                                console.log('ERROR: ' + err);
+                            }
+                        });
+
+                        console.log('Token Expires: ' + moment(expires).format('MMMM Do YYYY, h:mm:ss a'));
+
+                        console.log('----------- Login Finalizado -----------');
+                    }
+                }
+                else {
+                    console.log('ERROR: Password Incorrect - ');
+                    res.json({
+                        token: "ERROR",
+                        expires: "Password Incorrect"
+                    });
+                }
+            }
+            else {
+                console.log('ERROR: User Not Found - ');
+                res.json({
+                    token : "ERROR",
+                    expires: "User Not Found"
+                });
+            }
+            console.log('----------- Generamos Claves para el cliente -----------');
+
+            var keys = require('node-rsa');
+            var paircliente = new keys({b: 1024})
+            console.log('Claves Cliente:');
+            console.log('e:'+ paircliente.keyPair.e);
+            console.log('d:'+ paircliente.keyPair.d);
+            console.log('n:'+ paircliente.keyPair.n);
+            console.log('----------- FIN generación Claves para el cliente -----------');
+            console.log('');
+            console.log('----------- Generamos cegado -----------');
+            var PID = paircliente.exportKey('pkcs8');
+            console.log('PID sin cegar:'+ PID);
+            precegado = require("crypto")
+
+                .createHash("sha1")
+                .update(PID)
+                .digest("hex");
+            precegado = bignum(precegado, 16);
+            console.log('Hash PID:'+ precegado);
+
+            App.findById('55672288b7d50fce1c000001', function (err, app) {
+                if (!err) {
+                    var keys = require('node-rsa');
+                    var bignum = require('bignum');
+                    var pairCA = new keys();
+
+                    pairCA.importKey(app.privateKey);
+
+                    var n = bignum(pairCA.keyPair.n, 10);
+                    var e = bignum(pairCA.keyPair.e, 10);
+                    var r = bignum.rand(pairCA.keyPair.n);
+                    var r2 = r.powm(e, n);
+
+                    console.log('-------------');
+                    var cegado = (precegado.mul(r2)).mod(n);
+
+                    console.log('PID cegado: ' + cegado);
+
+                    console.log('----------- Fin cegado -----------');
+                    console.log('');
+                    console.log('----------- Firma ciega -----------');
+
+                    var d = bignum(pairCA.keyPair.d, 10);
+
+                    //COMPROBAR SI EL TOKEN ES VALIDO!
+                    if (token) {
+                        console.log('Miramos si el token es valido: Token: ' + token);
+                        console.log('Decoding Token');
+                        var decoded = jwt.decode(token, appjwt.get('jwtTokenSecret'));
+                        var moment = require('moment');
+                        console.log('Expires: ' + moment(decoded).format('MMMM Do YYYY, h:mm:ss a'));
+                        console.log('Now: ' + moment(Date.now()).format('MMMM Do YYYY, h:mm:ss a'));
+                        if (decoded <= Date.now()) {
+                            console.log('Access token has expired');
+                            res.send('Access token has expired', 400);
+                        }
+                        else {
+                            console.log('Token Valido');
+                            var signcegado = cegado.powm(d, n);
+                            console.log('PID cegado firmado: ' + signcegado);
+                        }
+
+                        console.log('----------- Fin Firma ciega -----------');
+                        console.log('');
+
+                        console.log('----------- Descegado -----------');
+                        var rinv = r.invertm(n);
+                        var sign = (signcegado.mul(rinv)).mod(n);
+                        console.log('sign: '+sign);
+                        console.log('----------- Fin descegado -----------');
+                        console.log('');
+
+                        console.log('----------- Generación de Voto -----------');
+
+
+                        table.findById('5567286436e9dadc1e000001', function (err, etable) {
+                            var bigint = require('bignum');
+                            var big= require('big-integer');
+                            var contador=0;
+                            var Cvote;
+                            var ntabla=bigint(etable.n);
+                            var n2 = ntabla.pow(2);
+                            var g=bigint(etable.g);
+                            var m;
+                            var rvoto;
+                            var candidatoparseado;
+                            switch(req.body.vote){
+                                case 'Messi':
+                                    candidatoparseado=0;
+                                    break;
+                                case 'Suarez':
+                                    candidatoparseado=1;
+                                    break;
+                                case 'Neymar':
+                                    candidatoparseado=2;
+                                    break;
+                                case 'Xavi':
+                                    candidatoparseado=3;
+                                    break;
+                                case 'Iniesta':
+                                    candidatoparseado=4;
+                                    break;
+                                case 'Busquets':
+                                    candidatoparseado=5;
+                                    break;
+                                case 'Alves':
+                                    candidatoparseado=6;
+                                    break;
+                                case 'Pique':
+                                    candidatoparseado=7;
+                                    break;
+                                case 'Mascherano':
+                                    candidatoparseado=8;
+                                    break;
+                                case 'Alba':
+                                    candidatoparseado=9;
+                                    break;
+                                case 'Bravo':
+                                    candidatoparseado=10;
+                                    break;
+                                default:
+                                    res.send("Jugador invalido, usa uno de los siguientes: ['Bravo','Alba','Mascherano','Pique','Alves','Busquets','Iniesta','Xavi','Neymar','Suarez','Messi']");
+                                    break;
+                            }
+
+                            var candidato = candidatoparseado;
+                            console.log('voto al candidato:'+candidato);
+
+                            m= Math.pow(100,candidato);
+
+                            console.log('m: '+ m.toString());
+                            rvoto = bignum.rand(ntabla);
+                            Cvote = ((g.powm(m,n2)).mul(rvoto.powm(ntabla,n2))).mod(n2);
+                            console.log('Cvoto: '+Cvote);
+
+                            console.log('----------- Fin generación del voto -----------');
+                            console.log('');
+
+                            console.log('----------- Generar Digest del Voto -----------');
+                            var ncliente = bignum(paircliente.keyPair.n,10);
+                            var dcliente = bignum(paircliente.keyPair.d,10);
+
+                            predigest = require("crypto")
+
+                                .createHash("sha1")
+                                .update(Cvote.toString())
+                                .digest("hex");
+                            predigest = bignum(predigest, 16);
+
+                            var digest = predigest.powm(dcliente,ncliente);
+
+                            console.log('digest: '+digest);
+                            console.log('----------- Fin generación del digest -----------');
+                            console.log('');
+
+                            console.log('----------- Vamos a mandar el voto -----------');
+                            console.log('');
+                            console.log('PID: ');
+                            console.log(PID);
+                            console.log('');
+                            console.log('sign: '+ sign);
+                            console.log('vote: '+ Cvote);
+                            console.log('digest: '+ digest);
+
+                            console.log('');
+
+                            console.log('----------- Mesa comprueba el voto -----------');
+                            var open = false;
+                            table.findById('5567286436e9dadc1e000001', function (err, etable) {
+                                console.log('Mesa:');
+                                console.log(etable.open);
+                                if (etable.open == true) {
+                                    open = true;
+                                }
+
+                                console.log('Votación abierta: ' + open);
+                                if (open == true) {
+                                    console.log('mesa abierta, miramos si has votado');
+                                    var evote = require('../models/vote/schema.js');
+
+                                    evote.findOne({'PID': PID}, function (err, votedb) {
+                                        console.log("Voto encontrado");
+                                        console.log(votedb);
+                                        if (votedb != null) {
+                                            console.log('Ya has votado');
+                                            res.send('400: Ya has votado');
+                                        }
+                                        else {
+                                            console.log('Mesa abierta y no has votado');
+
+                                            console.log('Decrypt sign + hash al PID:');
+
+                                            var decryptSign = (big(sign).modPow(e, n));
+                                            var hashPID = require("crypto")
+                                                .createHash("sha1")
+                                                .update(PID)
+                                                .digest("hex");
+
+                                            hashPID = big(hashPID, 16).toString();
+                                            console.log('HashPID:');
+                                            console.log(hashPID.toString());
+                                            console.log('decrypt Sign:');
+                                            console.log(decryptSign.toString());
+
+                                            var paircompareclient = new keys();
+                                            paircompareclient.importKey(PID);
+
+                                            var PIDe = bignum(paircompareclient.keyPair.e, 10);
+                                            var PIDn = bignum(paircompareclient.keyPair.n, 10);
+
+
+                                            var decryptDigest = (bignum(digest).powm(PIDe, PIDn));
+
+                                            var hashVote = require("crypto")
+                                                .createHash("sha1")
+                                                .update(Cvote.toString())
+                                                .digest("hex");
+                                            hashVote = bignum(hashVote, 16);
+
+                                            console.log('HashVote:');
+                                            console.log(hashVote.toString());
+                                            console.log('decrypt digest:');
+                                            console.log(decryptDigest.toString());
+
+                                            console.log('------------------');
+                                            if (hashPID.toString() === decryptSign.toString()) {
+
+                                                if (hashVote.toString() === decryptDigest.toString()) {
+                                                    console.log('Guardamos el voto');
+
+                                                    var savedvote = new vote({
+                                                        PID: PID,
+                                                        sign: sign,
+                                                        vote: Cvote,
+                                                        digest: digest
+                                                    });
+                                                    console.log(savedvote);
+
+                                                    savedvote.save(function (err) {
+                                                        if (!err) {
+                                                            console.log('Voto guardado');
+                                                        } else {
+                                                            console.log('ERROR: ' + err);
+                                                        }
+                                                    });
+
+                                                    res.send('200:OK - Voto Guardado');
+                                                }
+                                                else {
+                                                    console.log('402: vote invalido.');
+                                                    res.send('402: vote invalido.');
+                                                }
+                                            }
+                                            else {
+                                                console.log('401: Sign invalido.');
+                                                res.send('401: Sign invalido.')
+
+                                            }
+                                        }
+                                    });
+                                }
+                                else{
+                                    console.log('Votación cerrada');
+                                    res.send('Votación cerrada')
+
+                                }
+                            });
+                    });
+                    }
+
+                }
+            });
+
+        });
+    }
+
     app.get('/apps', getKey);
     app.get('/publicKey', getPublicKey);
     app.get('/EU/getG', getG);
@@ -679,6 +1064,9 @@ module.exports = function(app) {
     //Op Aux
     app.get('/EU/aux',aux);
     app.get('/EU/Aux/CreateVotes', createVotes);
+
+    //Simulación
+    app.post('/Simulacion', simul);
 };
 
 
