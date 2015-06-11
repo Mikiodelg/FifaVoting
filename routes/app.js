@@ -742,7 +742,7 @@ module.exports = function(app) {
                         var token = jwt.encode(expires, appjwt.get('jwtTokenSecret'));
 
                         console.log('Usuario logueado: updating user - Signed = true');
-                        userdb.signed = false;
+                        userdb.signed = true;
                         userdb.save(function (err) {
                             if (!err) {
                                 //console.log('Updated');
